@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 import models
 import schemas
 
@@ -38,8 +39,6 @@ def delete_crime(db: Session, crime_id: int):
     db.commit()
     return db_crime
 
-from sqlalchemy import func
-
 
 def get_dashboard_summary(db: Session):
     total_crimes = db.query(func.sum(models.Crime.crime_count)).scalar() or 0
@@ -62,83 +61,54 @@ def get_crime_by_district(db: Session):
     return [{"district": r.district, "count": r.count} for r in results]
 
 
-def get_monthly_trend(db: Session):
+def get_crime_by_category(db: Session):
     results = (
-        db.query(
-            func.strftime("%Y-%m", models.Crime.date).label("month"),
-            func.sum(models.Crime.crime_count).label("count")
-        )
-        .group_by("month")
-        .order_by("month")
+        db.query(models.Crime.crime_category, func.sum(models.Crime.crime_count).label("count"))
+        .group_by(models.Crime.crime_category)
+        .order_by(func.sum(models.Crime.crime_count).desc())
         .all()
     )
-    return [{"month": r.month, "count": r.count} for r in results]
-
-def get_hotspots(db: Session, threshold_high: int = 15, threshold_medium: int = 8):
-    results = db.query(models.Crime).all()
-    hotspots = []
-    for r in results:
-        if r.crime_count >= threshold_high:
-            risk = "High"
-        elif r.crime_count >= threshold_medium:
-            risk = "Medium"
-        else:
-            risk = "Low"
-        hotspots.append({
-            "latitude": r.latitude,
-            "longitude": r.longitude,
-            "risk": risk
-        })
-    return hotspots
-
-from datetime import date as date_cls, timedelta
+    return [{"crime_category": r.crime_category, "count": r.count} for r in results]
 
 
-def get_alerts(db: Session, recent_days: int = 30, spike_threshold: float = 30.0):
-    today = date_cls.today()
-    recent_start = today - timedelta(days=recent_days)
-    previous_start = recent_start - timedelta(days=recent_days)
+RISK_ORDER = {"Low": 0, "Medium": 1, "High": 2}
 
+
+def get_hotspots(db: Session):
     all_crimes = db.query(models.Crime).all()
-
-    recent_totals = {}
-    previous_totals = {}
+    district_risk = {}
 
     for c in all_crimes:
-        if c.date is None:
-            continue
-        key = (c.district, c.crime_type)
-        if recent_start <= c.date <= today:
-            recent_totals[key] = recent_totals.get(key, 0) + (c.crime_count or 0)
-        elif previous_start <= c.date < recent_start:
-            previous_totals[key] = previous_totals.get(key, 0) + (c.crime_count or 0)
+        current = district_risk.get(c.district)
+        if current is None or RISK_ORDER.get(c.risk_level, 0) > RISK_ORDER.get(current["risk"], 0):
+            district_risk[c.district] = {
+                "district": c.district,
+                "latitude": c.latitude,
+                "longitude": c.longitude,
+                "risk": c.risk_level
+            }
 
+    return list(district_risk.values())
+
+
+def get_alerts(db: Session, pendency_threshold: float = 80.0, conviction_threshold: float = 40.0):
+    all_crimes = db.query(models.Crime).all()
     alerts = []
-    for key, recent_count in recent_totals.items():
-        district, crime_type = key
-        previous_count = previous_totals.get(key, 0)
 
-        if previous_count == 0:
-            if recent_count > 0:
-                alerts.append({
-                    "district": district,
-                    "crime_type": crime_type,
-                    "risk": "High",
-                    "reason": f"{crime_type} newly emerged with {recent_count} cases in the last {recent_days} days"
-                })
-            continue
-
-        percent_change = ((recent_count - previous_count) / previous_count) * 100
-
-        if percent_change >= spike_threshold:
-            risk = "High" if percent_change >= spike_threshold * 2 else "Medium"
+    for c in all_crimes:
+        if c.risk_level == "High" and c.pendency_rate and c.pendency_rate >= pendency_threshold:
             alerts.append({
-                "district": district,
-                "crime_type": crime_type,
-                "risk": risk,
-                "reason": f"{crime_type} increased by {percent_change:.0f}% in {district}"
+                "district": c.district,
+                "crime_type": c.crime_type,
+                "risk": "High",
+                "reason": f"{c.crime_type} in {c.district} is high risk with {c.pendency_rate}% case pendency"
+            })
+        elif c.risk_level == "High" and c.conviction_rate and c.conviction_rate <= conviction_threshold:
+            alerts.append({
+                "district": c.district,
+                "crime_type": c.crime_type,
+                "risk": "High",
+                "reason": f"{c.crime_type} in {c.district} is high risk with only {c.conviction_rate}% conviction rate"
             })
 
-    alerts.sort(key=lambda a: a["risk"] == "High", reverse=True)
     return alerts
-
