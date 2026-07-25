@@ -1,4 +1,12 @@
 import { useEffect, useState } from "react";
+import "./App.css";
+
+import SummaryCard from "./components/SummaryCard";
+import TrendChart from "./components/TrendChart";
+import DistrictChart from "./components/DistrictChart";
+import AlertsPanel from "./components/AlertsPanel";
+import PredictionPanel from "./components/PredictionPanel";
+
 import {
   getDashboardSummary,
   getCrimeByDistrict,
@@ -6,9 +14,9 @@ import {
   getHotspots,
   getAlerts,
 } from "./api";
-import "./App.css";
 
 function App() {
+
   const [summary, setSummary] = useState(null);
   const [districtData, setDistrictData] = useState([]);
   const [monthlyData, setMonthlyData] = useState([]);
@@ -17,6 +25,7 @@ function App() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+
     Promise.all([
       getDashboardSummary(),
       getCrimeByDistrict(),
@@ -24,78 +33,86 @@ function App() {
       getHotspots(),
       getAlerts(),
     ])
-      .then(([summaryRes, districtRes, monthlyRes, hotspotsRes, alertsRes]) => {
+
+      .then(([summaryRes, districtRes, monthlyRes, hotspotRes, alertRes]) => {
+
         setSummary(summaryRes);
+
         setDistrictData(districtRes);
+
         setMonthlyData(monthlyRes);
-        setHotspots(hotspotsRes);
-        setAlerts(alertsRes);
+
+        setHotspots(hotspotRes);
+
+        setAlerts(alertRes);
+
       })
+
       .catch((err) => setError(err.message));
+
   }, []);
 
-  if (error) return <div>Error loading data: {error}</div>;
-  if (!summary) return <div>Loading...</div>;
+  if (error)
+    return <h1>{error}</h1>;
+
+  if (!summary)
+    return <h1>Loading...</h1>;
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      <h1>Crime Early Warning Dashboard</h1>
 
-      <section>
-        <h2>Summary</h2>
-        <p>Total crimes: {summary.total_crimes}</p>
-        <p>Districts: {summary.districts}</p>
-        <p>Crime types: {summary.crime_types}</p>
-      </section>
+    <div className="dashboard">
 
-      <section>
-        <h2>Crimes by District</h2>
-        <ul>
-          {districtData.map((d) => (
-            <li key={d.district}>
-              {d.district}: {d.count}
-            </li>
-          ))}
-        </ul>
-      </section>
+      <aside className="sidebar">
 
-      <section>
-        <h2>Monthly Trend</h2>
-        <ul>
-          {monthlyData.map((m) => (
-            <li key={m.month}>
-              {m.month}: {m.count}
-            </li>
-          ))}
-        </ul>
-      </section>
+        <h2>🚔 Crime AI</h2>
 
-      <section>
-        <h2>Hotspots ({hotspots.length})</h2>
-        <ul>
-          {hotspots.slice(0, 10).map((h, i) => (
-            <li key={i}>
-              ({h.latitude}, {h.longitude}) — {h.risk} risk
-            </li>
-          ))}
-        </ul>
-      </section>
+      </aside>
 
-      <section>
-        <h2>Alerts</h2>
-        {alerts.length === 0 ? (
-          <p>No active alerts.</p>
-        ) : (
-          <ul>
-            {alerts.map((a, i) => (
-              <li key={i}>
-                <strong>{a.risk}</strong> — {a.district} — {a.reason}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <main className="content">
+
+        <header className="header">
+
+          <h1>Crime Intelligence Dashboard</h1>
+
+          <p>AI Powered Early Warning System</p>
+
+        </header>
+
+        <section className="summary-grid">
+
+          <SummaryCard
+            title="Total Crimes"
+            value={summary.total_crimes}
+            color="#3b82f6"
+          />
+
+          <SummaryCard
+            title="Districts"
+            value={summary.districts}
+            color="#22c55e"
+          />
+
+          <SummaryCard
+            title="Crime Types"
+            value={summary.crime_types}
+            color="#f59e0b"
+          />
+
+          <SummaryCard
+            title="Active Alerts"
+            value={alerts.length}
+            color="#ef4444"
+          />
+
+        </section>
+        <TrendChart data={monthlyData}/>
+        <DistrictChart data={districtData}/>
+        <AlertsPanel alerts={alerts}/>
+        <PredictionPanel/>
+      </main>
+
     </div>
+
   );
 }
 
