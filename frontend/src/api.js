@@ -19,3 +19,8 @@ export const getAlerts = () =>
 
 export const getCrimes = () =>
   axios.get(`${API_BASE}/crimes/`).then((res) => res.data);
+
+export const predictCrime = (data) =>
+  axios
+    .post(`${API_BASE}/predict/`, data)
+    .then((res) => res.data);

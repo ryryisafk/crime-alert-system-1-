@@ -1,60 +1,82 @@
-import sys
 import os
-
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-
-import pandas as pd
-from sklearn.preprocessing import LabelEncoder
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
 import joblib
+import pandas as pd
 
-from database import SessionLocal
-import models
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.ensemble import RandomForestClassifier, IsolationForest
 
+DATASET = os.path.join(os.path.dirname(__file__), "karnataka_crime_2024.csv")
 
-def train():
-    db = SessionLocal()
-    crimes = db.query(models.Crime).all()
-    db.close()
+df = pd.read_csv(DATASET)
 
-    data = [{
-        "district": c.district,
-        "crime_type": c.crime_type,
-        "crime_category": c.crime_category,
-        "risk_level": c.risk_level
-    } for c in crimes]
+features = [
+    "district",
+    "crime_type",
+    "crime_category",
+    "crime_count",
+    "crime_rate",
+    "ipc_cases",
+    "sll_cases",
+    "total_cases",
+    "conviction_rate",
+    "chargesheet_rate",
+    "pendency_rate",
+    "police_range"
+]
 
-    df = pd.DataFrame(data)
+target = "risk_level"
 
-    district_encoder = LabelEncoder()
-    crime_type_encoder = LabelEncoder()
-    category_encoder = LabelEncoder()
+X = df[features]
+y = df[target]
 
-    df["district_enc"] = district_encoder.fit_transform(df["district"])
-    df["crime_type_enc"] = crime_type_encoder.fit_transform(df["crime_type"])
-    df["category_enc"] = category_encoder.fit_transform(df["crime_category"])
+categorical = [
+    "district",
+    "crime_type",
+    "crime_category",
+    "police_range"
+]
 
-    X = df[["district_enc", "crime_type_enc", "category_enc"]]
-    y = df["risk_level"]
+numerical = [
+    "crime_count",
+    "crime_rate",
+    "ipc_cases",
+    "sll_cases",
+    "total_cases",
+    "conviction_rate",
+    "chargesheet_rate",
+    "pendency_rate"
+]
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("cat", OneHotEncoder(handle_unknown="ignore"), categorical),
+        ("num", "passthrough", numerical)
+    ]
+)
 
-    model = RandomForestClassifier(n_estimators=200, random_state=42)
-    model.fit(X_train, y_train)
+classifier = Pipeline([
+    ("preprocessor", preprocessor),
+    ("model", RandomForestClassifier(
+        n_estimators=200,
+        random_state=42
+    ))
+])
 
-    accuracy = accuracy_score(y_test, model.predict(X_test))
-    print(f"Test accuracy: {accuracy:.2f}")
+classifier.fit(X, y)
 
-    ml_dir = os.path.dirname(__file__)
-    joblib.dump(model, os.path.join(ml_dir, "model.pkl"))
-    joblib.dump(district_encoder, os.path.join(ml_dir, "district_encoder.pkl"))
-    joblib.dump(crime_type_encoder, os.path.join(ml_dir, "crime_type_encoder.pkl"))
-    joblib.dump(category_encoder, os.path.join(ml_dir, "category_encoder.pkl"))
+joblib.dump(classifier, "model.pkl")
 
-    print(f"Model trained on {len(df)} records and saved to ml/model.pkl")
+X_processed = preprocessor.fit_transform(X)
 
+anomaly_model = IsolationForest(
+    contamination=0.05,
+    random_state=42
+)
 
-if __name__ == "__main__":
-    train()
+anomaly_model.fit(X_processed)
+
+joblib.dump(anomaly_model, "anomaly.pkl")
+
+print("Training Complete")

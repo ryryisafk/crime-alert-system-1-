@@ -1,42 +1,81 @@
 import os
 import joblib
-
-from database import SessionLocal
-import models
+import pandas as pd
 
 BASE_DIR = os.path.join(os.path.dirname(__file__), "..", "ml")
 
 model = joblib.load(os.path.join(BASE_DIR, "model.pkl"))
-district_encoder = joblib.load(os.path.join(BASE_DIR, "district_encoder.pkl"))
-crime_type_encoder = joblib.load(os.path.join(BASE_DIR, "crime_type_encoder.pkl"))
-category_encoder = joblib.load(os.path.join(BASE_DIR, "category_encoder.pkl"))
+anomaly = joblib.load(os.path.join(BASE_DIR, "anomaly.pkl"))
 
 
-def _get_category_lookup():
-    db = SessionLocal()
-    rows = db.query(models.Crime.district, models.Crime.crime_type, models.Crime.crime_category).all()
-    db.close()
-    return {(r.district, r.crime_type): r.crime_category for r in rows}
+def predict_risk(request):
 
+    sample = pd.DataFrame([{
+        "district": request.district,
+        "crime_type": request.crime_type,
+        "crime_category": request.crime_category,
+        "crime_count": request.crime_count,
+        "crime_rate": request.crime_rate,
+        "ipc_cases": request.ipc_cases,
+        "sll_cases": request.sll_cases,
+        "total_cases": request.total_cases,
+        "conviction_rate": request.conviction_rate,
+        "chargesheet_rate": request.chargesheet_rate,
+        "pendency_rate": request.pendency_rate,
+        "police_range": request.police_range
+    }])
 
-category_lookup = _get_category_lookup()
+    prediction = model.predict(sample)[0]
 
+    confidence = float(max(model.predict_proba(sample)[0]))
 
-def predict_risk(district: str, crime_type: str):
-    crime_category = category_lookup.get((district, crime_type))
-    if crime_category is None:
-        return None, None
+    processed = model.named_steps["preprocessor"].transform(sample)
 
-    try:
-        district_enc = district_encoder.transform([district])[0]
-        crime_type_enc = crime_type_encoder.transform([crime_type])[0]
-        category_enc = category_encoder.transform([crime_category])[0]
-    except ValueError:
-        return None, None
+    anomaly_result = anomaly.predict(processed)[0]
 
-    X = [[district_enc, crime_type_enc, category_enc]]
-    prediction = model.predict(X)[0]
-    probabilities = model.predict_proba(X)[0]
-    confidence = round(max(probabilities), 2)
+    is_anomaly = anomaly_result == -1
 
-    return prediction, confidence
+    risk_score = round(confidence * 100)
+
+    if prediction == "High":
+        risk_score += 10
+    elif prediction == "Medium":
+        risk_score += 5
+
+    risk_score = min(risk_score, 100)
+
+    if is_anomaly:
+        alert = {
+            "level": "HIGH",
+            "message": "Unusual crime pattern detected.",
+            "action": "Notify police immediately."
+        }
+
+    elif prediction == "High":
+        alert = {
+            "level": "HIGH",
+            "message": "High crime risk detected.",
+            "action": "Increase police patrol."
+        }
+
+    elif prediction == "Medium":
+        alert = {
+            "level": "MEDIUM",
+            "message": "Moderate crime risk.",
+            "action": "Monitor area."
+        }
+
+    else:
+        alert = {
+            "level": "LOW",
+            "message": "Area currently safe.",
+            "action": "Routine monitoring."
+        }
+
+    return {
+        "predicted_risk": prediction,
+        "confidence": round(confidence, 2),
+        "risk_score": risk_score,
+        "is_anomaly": is_anomaly,
+        "alert": alert
+    }
