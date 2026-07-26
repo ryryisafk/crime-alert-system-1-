@@ -9,9 +9,8 @@ router = APIRouter(
 )
 
 
-@router.post("/", response_model=schemas.PredictionResponse)
+@router.post("/")
 def predict(request: schemas.PredictionRequest):
-
     return predict_risk(request)
 
 @router.get("/districts")
