@@ -103,16 +103,19 @@ class AlertResponse(BaseModel):
 
 
 class PredictionResponse(BaseModel):
-    predicted_risk: str
-    confidence: float
-    risk_score: int
-    is_anomaly: bool
+    risk: str
+    confidence: int
+    warning_score: int
+
+    reasoning: list[str]
+    recommendations: list[str]
 
     district: str
     crime_type: str
     crime_category: str
+
     crime_count: int
     crime_rate: float
     police_range: str
 
-    alert: AlertResponse
+    is_anomaly: bool

@@ -117,26 +117,68 @@ function PredictionPanel() {
       </button>
       </div>
 
-      {
-        result && (
+        {result && (
 
           <div className="prediction-result">
 
-            <h3>
-              Risk: {result.predicted_risk}
-            </h3>
+              <h2>🚨 Risk: {result.risk}</h2>
 
+              <p>
+                  <strong>Confidence:</strong> {result.confidence}%
+              </p>
 
-            <p>
-              Confidence:
-              {" "}
-              {(result.confidence * 100).toFixed(1)}%
-            </p>
+              <p>
+                  <strong>Warning Score:</strong> {result.warning_score}/100
+              </p>
+
+              <hr />
+
+              <h3>📍 Location Details</h3>
+
+              <p><strong>District:</strong> {result.district}</p>
+
+              <p><strong>Police Range:</strong> {result.police_range}</p>
+
+              <p><strong>Crime Type:</strong> {result.crime_type}</p>
+
+              <p><strong>Crime Category:</strong> {result.crime_category}</p>
+
+              <hr />
+
+              <h3>📊 Crime Statistics</h3>
+
+              <p><strong>Crime Count:</strong> {result.crime_count}</p>
+
+              <p><strong>Crime Rate:</strong> {result.crime_rate}</p>
+
+              <p>
+                  <strong>Anomaly Detected:</strong>{" "}
+                  {result.is_anomaly ? "⚠️ Yes" : "✅ No"}
+              </p>
+
+              <hr />
+
+              <h3>🧠 AI Reasoning</h3>
+
+              <ul>
+                  {result.reasoning.map((item, index) => (
+                      <li key={index}>{item}</li>
+                  ))}
+              </ul>
+
+              <hr />
+
+              <h3>🛡️ Recommendations</h3>
+
+              <ul>
+                  {result.recommendations.map((item, index) => (
+                      <li key={index}>{item}</li>
+                  ))}
+              </ul>
 
           </div>
 
-        )
-      }
+          )}
 
 
     </div>
