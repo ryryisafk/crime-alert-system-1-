@@ -156,11 +156,11 @@ The project uses the Karnataka Crime Dataset for analysis and prediction. The da
 Developed as part of the Karnataka State Police Datathon.
 
 Team Members:
-- Ryan
-- Nirupama
-- Mrinal
-- Goury
-- Nandana
+- Ryan Sebastian Dcruz
+- Nirupama S
+- Mrinal Krishnan J
+- Goury Vibin
+- Nandana Predeep
 
 ---
 
