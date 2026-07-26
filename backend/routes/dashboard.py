@@ -24,3 +24,10 @@ def crime_by_district(db: Session = Depends(get_db)):
 @router.get("/crime-by-category", response_model=list[schemas.CategoryCount])
 def crime_by_category(db: Session = Depends(get_db)):
     return crud.get_crime_by_category(db)
+
+@router.get(
+    "/monthly-trend",
+    response_model=list[schemas.MonthlyTrend]
+)
+def monthly_trend(db: Session = Depends(get_db)):
+    return crud.get_monthly_trend(db)

@@ -49,6 +49,10 @@ class DistrictCount(BaseModel):
     district: str
     count: int
 
+class CategoryCount(BaseModel):
+    crime_type: str
+    count: int
+
 
 class MonthlyTrend(BaseModel):
     month: str
@@ -56,9 +60,24 @@ class MonthlyTrend(BaseModel):
 
 
 class Hotspot(BaseModel):
+    district: str
+
     latitude: float
     longitude: float
+
     risk: str
+
+    crime_type: str
+    crime_category: str
+
+    crime_count: int
+    crime_rate: float
+
+    police_range: str
+
+    conviction_rate: float
+    chargesheet_rate: float
+    pendency_rate: float
 
 
 class Alert(BaseModel):
@@ -75,20 +94,6 @@ class Alert(BaseModel):
 class PredictionRequest(BaseModel):
     district: str
     crime_type: str
-    crime_category: str
-
-    crime_count: int
-    crime_rate: float
-
-    ipc_cases: int
-    sll_cases: int
-    total_cases: int
-
-    conviction_rate: float
-    chargesheet_rate: float
-    pendency_rate: float
-
-    police_range: str
 
 
 class AlertResponse(BaseModel):
@@ -102,4 +107,12 @@ class PredictionResponse(BaseModel):
     confidence: float
     risk_score: int
     is_anomaly: bool
+
+    district: str
+    crime_type: str
+    crime_category: str
+    crime_count: int
+    crime_rate: float
+    police_range: str
+
     alert: AlertResponse

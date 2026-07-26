@@ -3,6 +3,30 @@ from sqlalchemy import func
 import models
 import schemas
 
+import os
+import pandas as pd
+
+DATASET = os.path.join(
+    os.path.dirname(__file__),
+    "ml",
+    "../../CRIME_REVIEW_2021_TO_2024_KARNATAKA_CLEAN.csv"
+)
+
+MONTH_ORDER = {
+    "JAN":1,
+    "FEB":2,
+    "MAR":3,
+    "APR":4,
+    "MAY":5,
+    "JUN":6,
+    "JUL":7,
+    "AUG":8,
+    "SEP":9,
+    "OCT":10,
+    "NOV":11,
+    "DEC":12
+}
+
 
 def get_all_crimes(db: Session):
     return db.query(models.Crime).all()
@@ -71,24 +95,36 @@ def get_crime_by_category(db: Session):
     return [{"crime_category": r.crime_category, "count": r.count} for r in results]
 
 
-RISK_ORDER = {"Low": 0, "Medium": 1, "High": 2}
-
-
 def get_hotspots(db: Session):
-    all_crimes = db.query(models.Crime).all()
-    district_risk = {}
 
-    for c in all_crimes:
-        current = district_risk.get(c.district)
-        if current is None or RISK_ORDER.get(c.risk_level, 0) > RISK_ORDER.get(current["risk"], 0):
-            district_risk[c.district] = {
-                "district": c.district,
-                "latitude": c.latitude,
-                "longitude": c.longitude,
-                "risk": c.risk_level
-            }
+    crimes = db.query(models.Crime).all()
 
-    return list(district_risk.values())
+    return [
+
+        {
+            "district": crime.district,
+
+            "latitude": crime.latitude,
+            "longitude": crime.longitude,
+
+            "risk": crime.risk_level,
+
+            "crime_type": crime.crime_type,
+            "crime_category": crime.crime_category,
+
+            "crime_count": crime.crime_count,
+            "crime_rate": crime.crime_rate,
+
+            "police_range": crime.police_range,
+
+            "conviction_rate": crime.conviction_rate,
+            "chargesheet_rate": crime.chargesheet_rate,
+            "pendency_rate": crime.pendency_rate,
+        }
+
+        for crime in crimes
+
+    ]
 
 
 def get_alerts(db: Session, pendency_threshold: float = 80.0, conviction_threshold: float = 40.0):
@@ -112,3 +148,24 @@ def get_alerts(db: Session, pendency_threshold: float = 80.0, conviction_thresho
             })
 
     return alerts
+
+def get_monthly_trend(db=None):
+    df = pd.read_csv(DATASET)
+
+    trend = (
+        df.groupby(["Year", "Month"])["During the current month"]
+          .sum()
+          .reset_index()
+    )
+
+    trend["month_no"] = trend["Month"].map(MONTH_ORDER)
+
+    trend = trend.sort_values(["Year", "month_no"])
+
+    return [
+        {
+            "month": f"{row['Month']} {int(row['Year'])}",
+            "count": int(row["During the current month"])
+        }
+        for _, row in trend.iterrows()
+    ]

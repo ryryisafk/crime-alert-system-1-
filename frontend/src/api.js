@@ -24,3 +24,9 @@ export const predictCrime = (data) =>
   axios
     .post(`${API_BASE}/predict/`, data)
     .then((res) => res.data);
+
+export const getDistricts = () =>
+  axios.get(`${API_BASE}/predict/districts`).then(res => res.data);
+
+export const getCrimeTypes = () =>
+  axios.get(`${API_BASE}/predict/crime-types`).then(res => res.data);
