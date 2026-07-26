@@ -6,6 +6,7 @@ import TrendChart from "./components/TrendChart";
 import DistrictChart from "./components/DistrictChart";
 import AlertsPanel from "./components/AlertsPanel";
 import PredictionPanel from "./components/PredictionPanel";
+import CrimeMap from "./components/CrimeMap";
 
 import {
   getDashboardSummary,
@@ -107,6 +108,7 @@ function App() {
         </section>
         <TrendChart data={monthlyData}/>
         <DistrictChart data={districtData}/>
+        <CrimeMap hotspots={hotspots}/>
         <AlertsPanel alerts={alerts}/>
         <PredictionPanel/>
       </main>

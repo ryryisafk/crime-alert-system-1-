@@ -7,7 +7,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.ensemble import RandomForestClassifier, IsolationForest
 
-DATASET = os.path.join(os.path.dirname(__file__), "karnataka_crime_2024.csv")
+DATASET = os.path.join(os.path.dirname(__file__), "../karnataka_crime_2024.csv")
 
 df = pd.read_csv(DATASET)
 
