@@ -1,5 +1,4 @@
-﻿# crime-alert-system-1-
-# Crime Alert System
+﻿# Crime Alert System
 
 ## Overview
 
@@ -158,7 +157,7 @@ Developed as part of the Karnataka State Police Datathon.
 
 Team Members:
 - Ryan
-- Pama
+- Nirupama
 - Mrinal
 - Goury
 - Nandana
